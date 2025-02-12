@@ -1,34 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
+const formatMessage = (content) => {
+  return content.split(/<br\/>/g).map((line, index) => (
+    <div key={index}>
+      <br/>
+      {line.split(/\*\*(.*?)\*\*/g).map((part, i) =>
+        i % 2 === 1 ? <strong key={i}>{part}</strong> : part
+      )}
+    </div>
+  ));
+};
 
 export default function Chatbot() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false); // 로딩 상태 추가
+  const [loading, setLoading] = useState(false);
+  const [sseActive, setSseActive] = useState(false);
+  const chatBoxRef = useRef(null);
+  
+  useEffect(() => {
+    if (chatBoxRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = chatBoxRef.current;
+      if (scrollHeight - scrollTop - clientHeight < 100) {
+        chatBoxRef.current.scrollTop = scrollHeight;
+      }
+    }
+  }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  const sendMessage = () => {
+    if (!input.trim() || sseActive) return;
 
     const userMessage = { role: "user", content: input };
     setMessages([...messages, userMessage]);
-    setLoading(true); // 로딩 시작
+    setLoading(true);
+    setSseActive(true);
+    setInput("");
 
-    try {
-      const response = await fetch("http://192.168.0.147:8000/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_message: input }),
+    const eventSource = new EventSource(`http://192.168.0.147:8000/chat?user_message=${encodeURIComponent(input)}`);
+
+    eventSource.onmessage = (event) => {
+      setMessages((prev) => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.role === "bot") {
+          setLoading(false); 
+          return [
+            ...prev.slice(0, -1),
+            { role: "bot", content: lastMessage.content + event.data }
+          ];
+        } else {
+          setLoading(false); 
+          return [...prev, { role: "bot", content: event.data }];
+        }
       });
+    };
 
-      const data = await response.json();
-      const botMessage = { role: "bot", content: data.generated_text };
-
-      setMessages((prev) => [...prev, botMessage]);
-      setInput("");
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setLoading(false); // 로딩 종료
-    }
+    eventSource.onerror = () => {
+      eventSource.close();
+      setSseActive(false);
+    };
   };
 
   const handleKeyPress = (e) => {
@@ -39,19 +68,18 @@ export default function Chatbot() {
 
   return (
     <div className="chat-container">
-      <div className="chat-box">
-        {/* messages 배열이 비어 있어도 채팅박스는 비어있지 않게 유지 */}
+      <div className="chat-box" ref={chatBoxRef} style={{ overflowY: "auto", maxHeight: "900px" }}>
         {messages.length === 0 && !loading && (
           <div className="bot">대화를 시작해보세요!</div>
         )}
         {messages.map((msg, idx) => (
           <div key={idx} className={msg.role}>
-            {msg.content}
+            {msg.role === 'user' ? msg.content : formatMessage(msg.content)}
           </div>
         ))}
         {loading && (
           <div className="bot">
-            <div className="spinner"></div> {/* 로딩 스피너 */}
+            <div className="spinner"></div>
           </div>
         )}
       </div>
@@ -60,10 +88,11 @@ export default function Chatbot() {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress} // Enter 키 이벤트 처리
+          onKeyPress={handleKeyPress}
           placeholder="메시지를 입력하세요..."
+          disabled={sseActive}
         />
-        <button onClick={sendMessage}>전송</button>
+        <button onClick={sendMessage} disabled={sseActive}>전송</button>
       </div>
     </div>
   );
