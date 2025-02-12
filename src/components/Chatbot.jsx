@@ -17,7 +17,7 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [sseActive, setSseActive] = useState(false);
   const chatBoxRef = useRef(null);
-  
+
   useEffect(() => {
     if (chatBoxRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = chatBoxRef.current;
@@ -36,19 +36,24 @@ export default function Chatbot() {
     setSseActive(true);
     setInput("");
 
-    const eventSource = new EventSource(`http://192.168.0.147:8000/chat?user_message=${encodeURIComponent(input)}`);
-
+    // 히스토리를 쿼리 문자열로 변환하여 서버로 전달
+    const historyQuery = encodeURIComponent(JSON.stringify(messages));
+    console.log(historyQuery);
+    const eventSource = new EventSource(
+      `http://192.168.0.147:8000/chat?user_message=${encodeURIComponent(input)}&history=${historyQuery}`
+    );
+  
     eventSource.onmessage = (event) => {
       setMessages((prev) => {
         const lastMessage = prev[prev.length - 1];
         if (lastMessage && lastMessage.role === "bot") {
-          setLoading(false); 
+          setLoading(false);
           return [
             ...prev.slice(0, -1),
             { role: "bot", content: lastMessage.content + event.data }
           ];
         } else {
-          setLoading(false); 
+          setLoading(false);
           return [...prev, { role: "bot", content: event.data }];
         }
       });
