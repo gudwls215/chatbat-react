@@ -10,6 +10,7 @@ export default function CreateQuiz() {
   const [questionCount, setQuestionCount] = useState(1);
   const [quizData, setQuizData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(false);
 
   const handleButtonClick = (button) => {
     setSelectedButton(button);
@@ -21,6 +22,10 @@ export default function CreateQuiz() {
 
   const handleModalClose = () => {
     setIsModalOpen(false);
+  };
+
+  const handleShowAnswer = (questionId) => {
+    setShowAnswers((prev) => ({ ...prev, [questionId]: true }));
   };
 
   const handleQuestionTypeChange = (type) => {
@@ -58,10 +63,11 @@ export default function CreateQuiz() {
     setLoading(true);
     axios.post('http://192.168.0.147:8000/quiz', payload)
       .then(response => {
-        
+
         const parsedQuizData = JSON.parse(response.data);
         console.log('Quiz created successfully:', parsedQuizData.questions);
         setQuizData(parsedQuizData);
+        setShowAnswers({});
         setIsModalOpen(false);
         setLoading(false);
       })
@@ -134,7 +140,7 @@ export default function CreateQuiz() {
               <label>
                 옵션 수:
                 <select value={optionCount} onChange={(e) => setOptionCount(e.target.value)} disabled={questionType !== '객관식'}>
-                  {[...Array(10).keys()].map((i) => (
+                  {[...Array(5).keys()].map((i) => (
                     <option key={i + 1} value={i + 1}>
                       {i + 1}
                     </option>
@@ -168,16 +174,22 @@ export default function CreateQuiz() {
       {quizData && Array.isArray(quizData.questions) && (
         <div className="quiz-preview">
           <h3>퀴즈 미리보기</h3>
-          {quizData.questions.map((question) => (
+          {quizData.questions.map((question, qIndex) => (
             <div key={question.id} className="question">
-              <h4>{question.question}</h4>
+              <h4>{qIndex + 1 + ". " + question.question}</h4>
               <ul className="options">
-                {question.options.map((option) => (
-                  <li key={option.id}>{option.text}</li>
+                {question.options.map((option, oIndex) => (
+                  <li key={option.id}>{oIndex + 1 + ". " + option.text}</li>
                 ))}
               </ul>
-              <p><strong>정답:</strong> {question.correct_answer}</p>
-              <p><strong>설명:</strong> {question.explanation}</p>
+              {showAnswers[question.id] ? (
+                <div className="answer">
+                  <p><strong>정답:</strong> {question.correct_answer}</p>
+                  <p className="explanation"><strong>설명:</strong> {question.explanation}</p>
+                </div>
+              ) : (
+                <button onClick={() => handleShowAnswer(question.id)}>정답보기</button>
+              )}
             </div>
           ))}
         </div>
