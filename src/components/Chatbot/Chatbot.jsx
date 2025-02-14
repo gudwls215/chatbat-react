@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 const formatMessage = (content) => {
   return content.split(/<br\/>/g).map((line, index) => (
     <div key={index}>
-      <br/>
+      <br />
       {line.split(/\*\*(.*?)\*\*/g).map((part, i) =>
         i % 2 === 1 ? <strong key={i}>{part}</strong> : part
       )}
@@ -17,6 +18,7 @@ export default function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [sseActive, setSseActive] = useState(false);
   const chatBoxRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (chatBoxRef.current) {
@@ -42,7 +44,7 @@ export default function Chatbot() {
     const eventSource = new EventSource(
       `http://192.168.0.147:8000/chat?user_message=${encodeURIComponent(input)}&history=${historyQuery}`
     );
-  
+
     eventSource.onmessage = (event) => {
       setMessages((prev) => {
         const lastMessage = prev[prev.length - 1];
@@ -72,32 +74,37 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="chat-container">
-      <div className="chat-box" ref={chatBoxRef} style={{ overflowY: "auto", maxHeight: "900px" }}>
-        {messages.length === 0 && !loading && (
-          <div className="bot">대화를 시작해보세요!</div>
-        )}
-        {messages.map((msg, idx) => (
-          <div key={idx} className={msg.role}>
-            {msg.role === 'user' ? msg.content : formatMessage(msg.content)}
-          </div>
-        ))}
-        {loading && (
-          <div className="bot">
-            <div className="spinner"></div>
-          </div>
-        )}
-      </div>
-      <div className="input-box">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-          placeholder="메시지를 입력하세요..."
-          disabled={sseActive}
-        />
-        <button onClick={sendMessage} disabled={sseActive}>전송</button>
+    <div className="App">
+      <h1>AI 챗봇</h1>
+
+      <div className="chat-container">
+        <button onClick={() => navigate('/create-quiz')} className="move-quiz-button">문제 생성하기</button>
+        <div className="chat-box" ref={chatBoxRef} style={{ overflowY: "auto", maxHeight: "900px" }}>
+          {messages.length === 0 && !loading && (
+            <div className="bot">대화를 시작해보세요!</div>
+          )}
+          {messages.map((msg, idx) => (
+            <div key={idx} className={msg.role}>
+              {msg.role === 'user' ? msg.content : formatMessage(msg.content)}
+            </div>
+          ))}
+          {loading && (
+            <div className="bot">
+              <div className="spinner"></div>
+            </div>
+          )}
+        </div>
+        <div className="input-box">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="메시지를 입력하세요..."
+            disabled={sseActive}
+          />
+          <button onClick={sendMessage} disabled={sseActive}>전송</button>
+        </div>
       </div>
     </div>
   );

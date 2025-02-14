@@ -1,12 +1,16 @@
-import Chatbot from "./components/Chatbot";
-import "./App.css";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Chatbot from "./components/Chatbot/Chatbot";
+import CreateQuiz from "./components/CreateQuiz/CreateQuiz";
+import './App.css';
 
 function App() {
   return (
-    <div className="App">
-      <h1>AI 챗봇</h1>
-      <Chatbot />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Chatbot />} />
+        <Route path="/create-quiz" element={<CreateQuiz />} />
+      </Routes>
+    </Router>
   );
 }
 
