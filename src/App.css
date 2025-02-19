@@ -27,6 +27,7 @@ body {
 /* 채팅 박스 */
 .chat-box {
   flex-grow: 1;
+  position: relative;
   overflow-y: auto;
   padding: 10px;
   margin-bottom: 20px;
@@ -135,6 +136,54 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 1000;
+}
+
+.fixed-buttons {
+  position: sticky;
+  margin-bottom: 15px;
+  bottom: 15px;
+  left: 15px;
+  display: flex;
+  gap: 10px;
+  z-index: 100; /* chat-box 안에서 고정된 위치 */
+}
+
+.view-categories-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50px; /* 알약 모양 */
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.view-categories-button:hover {
+  background-color: #0056b3;
+}
+
+.category-item {
+  padding: 5px 10px;
+  margin: 5px 0;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.category-item:hover {
+  background-color: #e1e1e1;
+}
+
+.course-item {
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.course-divider {
+  border: 0;
+  height: 1px;
+  background: #ccc;
+  margin: 10px 0;
 }
 
 /* 로딩 스피너 */

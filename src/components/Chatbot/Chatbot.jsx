@@ -2,12 +2,35 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 const formatMessage = (content) => {
+  if (typeof content !== 'string') {
+    return <div></div>;
+  }
   return content.split(/<br\/>/g).map((line, index) => (
     <div key={index}>
       <br />
       {line.split(/\*\*(.*?)\*\*/g).map((part, i) =>
         i % 2 === 1 ? <strong key={i}>{part}</strong> : part
       )}
+    </div>
+  ));
+};
+
+const formatCategoryMessage = (content, handleCategoryItemClick) => {
+  return content.split(', ').map((item, index) => (
+    <div key={index} className="category-item" onClick={() => handleCategoryItemClick(item)}>
+      {item}
+    </div>
+  ));
+};
+
+const formatCourseMessage = (courses) => {
+  return courses.map((course, index) => (
+    <div key={index} className="course-item">
+      <img src={course.COURSE_IMAGE_FILE_PATH} alt={course.documents} style={{ width: '75px', height: '75px' }} />
+      <div>{course.documents}</div>
+      <div>{course.CATEGORY_NM}</div>
+      <div>{course.DIFFICULTY}</div>
+      <hr className="course-divider" />
     </div>
   ));
 };
@@ -22,10 +45,7 @@ export default function Chatbot() {
 
   useEffect(() => {
     if (chatBoxRef.current) {
-      const { scrollTop, scrollHeight, clientHeight } = chatBoxRef.current;
-      if (scrollHeight - scrollTop - clientHeight < 100) {
-        chatBoxRef.current.scrollTop = scrollHeight;
-      }
+      chatBoxRef.current.scrollTop = chatBoxRef.current.scrollHeight;
     }
   }, [messages]);
 
@@ -73,19 +93,62 @@ export default function Chatbot() {
     }
   };
 
+  const handleCategoryClick = () => {
+    const userMessage = { role: "user", content: "강의 카테고리 보기" };
+    const botMessage = {
+      role: "bot",
+      content: "법정의무, 교양/생활/건강, 정보/컴퓨터, 취업/창업, 자격증, 외국어, 직무개발, 업무생산성, 공동역량",
+      isCategory: true
+    };
+    setMessages([...messages, userMessage, botMessage]);
+  };
+
+  const handleCategoryItemClick = (item) => {
+    fetch('http://192.168.0.147:8000/courses/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ category: item })
+    })
+    .then(response => response.json())
+    .then(data => {
+      const courses = data.documents.map((doc, index) => ({
+        documents: doc,
+        ...data.metadatas[index]
+      }));
+      const botMessage = {
+        role: "bot",
+        content: courses,
+        isCategory: false,
+        isCourse: true
+      };
+      setMessages((prev) => [...prev, botMessage]);
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+      const errorMessage = {
+        role: "bot",
+        content: "강의 정보를 불러오는 중 오류가 발생했습니다. 다시 시도해주세요.",
+        isCategory: false
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    });
+  };
+
   return (
     <div className="App">
       <h1>AI 챗봇</h1>
 
       <div className="chat-container">
         <button onClick={() => navigate('/create-quiz')} className="move-quiz-button">문제 생성하기</button>
-        <div className="chat-box" ref={chatBoxRef} style={{ overflowY: "auto", maxHeight: "900px" }}>
+        <div className="chat-box" ref={chatBoxRef} style={{ overflowY: "auto", maxHeight: "900px", position: "relative" }}>
           {messages.length === 0 && !loading && (
             <div className="bot">대화를 시작해보세요!</div>
           )}
           {messages.map((msg, idx) => (
             <div key={idx} className={msg.role}>
-              {msg.role === 'user' ? msg.content : formatMessage(msg.content)}
+              {msg.role === 'user' ? msg.content : (msg.isCategory ? formatCategoryMessage(msg.content, handleCategoryItemClick) : (msg.isCourse ? formatCourseMessage(msg.content) : formatMessage(msg.content)))}
             </div>
           ))}
           {loading && (
@@ -93,6 +156,10 @@ export default function Chatbot() {
               <div className="spinner"></div>
             </div>
           )}
+        </div>
+        <div className="fixed-buttons">
+          <button onClick={handleCategoryClick} className="view-categories-button">강의 카테고리 보기</button>
+          <button onClick={() => navigate('/lecture-categories')} className="view-categories-button">강의 검색</button>
         </div>
         <div className="input-box">
           <input
